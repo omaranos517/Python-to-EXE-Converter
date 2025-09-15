@@ -140,7 +140,7 @@ def convert_file():
         return
     if not filename.endswith(".py"):
         if not filename.endswith(".pyw"):
-            messagebox.showerror("Error", "Invalid file. Please select a .py file.")
+            messagebox.showerror("Error", "Invalid file. Please select a .py file or .pyw file.")
             return
     if os.path.basename(filename) == "build.py":
         messagebox.showerror("Error", "You cannot convert the build script itself.")
@@ -150,7 +150,7 @@ def convert_file():
         return
 
     # إظهار مؤشر التحميل
-    loading_frame.pack(pady=10)
+    loading_frame.grid(row=8, column=0, columnspan=3, pady=10)
     spinner.start()
     update_loading_message()  # بدء رسائل التحميل المتغيرة
 
@@ -170,7 +170,7 @@ def convert_file():
         PyInstaller.__main__.run(command)
         
         # إخفاء مؤشر التحميل بعد الانتهاء
-        loading_frame.pack_forget()
+        loading_frame.grid_forget()
         spinner.stop()
         
         messagebox.showinfo(
