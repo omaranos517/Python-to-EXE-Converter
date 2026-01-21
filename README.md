@@ -27,5 +27,5 @@ pip install pyinstaller
 ```
 3. Run the application:
 ```bash
-python main.py
+python build.py
 ```
