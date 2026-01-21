@@ -1,6 +1,9 @@
 # Python to EXE Converter
 
 A simple and user-friendly GUI application to convert Python scripts (`.py` / `.pyw`) into standalone executable files (`.exe`) using **PyInstaller**.
+<p align="right">
+  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/python/python-original.svg" alt="python" width="40" height="40"/>
+</p>
 
 ## Features
 
@@ -11,13 +14,18 @@ A simple and user-friendly GUI application to convert Python scripts (`.py` / `.
 - Build as a **single executable file** (`onefile`) or **directory with dependencies** (`onedir`).
 - Loading spinner with dynamic messages to indicate progress.
 
-## Screenshots
+## Getting Started
 
-*(You can add screenshots here by uploading images to the repository and linking them)*
-
-## Installation
-
-1. Make sure you have Python 3 installed.
-2. Install required packages:
+1. Clone the repository:
+```bash
+git clone https://github.com/omaranos517/Python-to-EXE-Converter.git
+cd python-to-exe
+```
+2. Install dependencies:
 ```bash
 pip install pyinstaller
+```
+3. Run the application:
+```bash
+python main.py
+```
