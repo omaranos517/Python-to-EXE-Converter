@@ -25,7 +25,13 @@ class ToolTip:
         self.widget.bind("<Leave>", self.leave)
 
     def enter(self, event=None):
-        x, y, _, _ = self.widget.bbox("insert")
+        bbox = self.widget.bbox("insert")
+
+        if bbox:
+            x, y, _, _ = bbox
+        else:
+            x = y = 0
+
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 25
         
@@ -94,7 +100,19 @@ def select_output_dir():
 
 # ------------------ تحويل الملف ------------------
 def start_conversion():
-    # تشغيل التحويل في thread منفصل لمنع تجميد الواجهة
+    # التحقق الأولي قبل بدء الخيط (Thread)
+    filename = py_entry.get().strip()
+    if not filename or not os.path.exists(filename):
+        messagebox.showerror("Error", "Please select a valid Python file.")
+        return
+
+    # إظهار مؤشر التحميل في الواجهة الرئيسية (Main Thread)
+    loading_frame.grid(row=8, column=0, columnspan=3, pady=10)
+    spinner.start()
+    update_loading_message()
+    convert_button.config(state=tk.DISABLED, text="Converting...")
+
+    # تشغيل التحويل
     conversion_thread = threading.Thread(target=convert_file)
     conversion_thread.daemon = True
     conversion_thread.start()
@@ -132,61 +150,51 @@ def convert_file():
     exe_name = name_entry.get().strip()
     use_noconsole = noconsole_var.get()
     mode = build_mode.get()
+    
+    if out_dir.startswith("Default:") or not os.path.isdir(out_dir):
+        out_dir = ""
+    if exe_name.startswith("Default:"):
+        exe_name = ""
+
     import re
-    exe_name = re.sub(r'[<>:"/\\|?*]', '_', exe_name) # إزالة الأحرف غير المسموح بها في أسماء الملفات
+    exe_name = re.sub(r'[<>:"/\\|?*]', '_', exe_name)
 
-    if not filename:
-        messagebox.showerror("Error", "Please select a Python file.")
-        return
-    if not filename.endswith(".py"):
-        if not filename.endswith(".pyw"):
-            messagebox.showerror("Error", "Invalid file. Please select a .py file or .pyw file.")
-            return
-    if os.path.basename(filename) == "build.py":
-        messagebox.showerror("Error", "You cannot convert the build script itself.")
-        return
-    if not os.path.exists(filename):
-        messagebox.showerror("Error", f"File not found: {filename}")
-        return
-
-    # إظهار مؤشر التحميل
-    loading_frame.grid(row=8, column=0, columnspan=3, pady=10)
-    spinner.start()
-    update_loading_message()  # بدء رسائل التحميل المتغيرة
-
+    # بناء قائمة الأوامر بشكل صحيح لـ PyInstaller
     command = []
     if mode == "onefile": command.append("--onefile")
+    else: command.append("--onedir")
+    
     if use_noconsole: command.append("--noconsole")
-    if icon_path: command.append(f"--icon={icon_path}")
-    if out_dir: command.append(f"--distpath={out_dir}")
-    if exe_name: command.append(f"--name={exe_name}")
+    
+    if icon_path and os.path.exists(icon_path):
+        command.extend(["--icon", icon_path])
+    
+    if out_dir:
+        command.extend(["--distpath", out_dir])
+    
+    if exe_name:
+        command.extend(["--name", exe_name])
+    
     command.append(filename)
 
     try:
-        # تعطيل زر التحويل أثناء عملية البناء
-        convert_button.config(state=tk.DISABLED, text="Converting...")
-        
-        # تنفيذ الأمر الفعلي
         PyInstaller.__main__.run(command)
         
-        # إخفاء مؤشر التحميل بعد الانتهاء
-        loading_frame.grid_forget()
-        spinner.stop()
+        # التحديث النهائي للواجهة يجب أن يعود للـ Main Thread
+        root.after(0, lambda: finalize_ui(True, filename, out_dir, exe_name, mode))
         
-        messagebox.showinfo(
-            "Success",
-            f"✅ Conversion of {filename} to exe completed.\n"
-            f"Output Folder: {out_dir if out_dir else 'dist/'}\n"
-            f"Exe Name: {exe_name if exe_name else os.path.splitext(os.path.basename(filename))[0]}\n"
-            f"Mode: {'One File' if mode == 'onefile' else 'One Directory'}"
-        )
     except Exception as e:
-        messagebox.showerror("Error", str(e))
-        loading_frame.pack_forget()
-        spinner.stop()
-    finally:
-        # إعادة تمكين زر التحويل
-        convert_button.config(state=tk.NORMAL, text="Convert to EXE")
+        root.after(0, lambda: finalize_ui(False, str(e)))
+
+def finalize_ui(success, info1, info2=None, info3=None, info4=None):
+    loading_frame.grid_forget()
+    spinner.stop()
+    convert_button.config(state=tk.NORMAL, text="Convert to EXE")
+    
+    if success:
+        messagebox.showinfo("Success", f"✅ Conversion completed!\nFile: {info1}")
+    else:
+        messagebox.showerror("Error", f"An error occurred: {info1}")
 
 # تأثيرات تفاعلية للأزرار
 def on_enter(e, button, color):
